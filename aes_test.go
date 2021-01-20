@@ -6,13 +6,14 @@ import (
 
 // 例举CBC模式用法，其他类似
 func TestAesEncryptToBase64(t *testing.T) {
-	data, err := AesECBEncryptToBase64("123", "1234567891234567")
+	str := `{"currency":"SSS","keystore":"123456","time":1610795687392}`
+	data, err := AesECBEncryptToBase64(str, "123456")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Log(data)
 
-	data, err = AesECBDecryptFromBase64(data, "1234567891234567")
+	data, err = AesECBDecryptFromBase64(data, "123")
 	if err != nil {
 		t.Fatal(err)
 	}

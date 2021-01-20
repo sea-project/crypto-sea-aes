@@ -1,9 +1,11 @@
 package aes
 
 import (
+	"bytes"
 	"crypto/aes"
 	"encoding/base64"
 	"errors"
+	sha3 "github.com/sea-project/crypto-hash-sha3"
 )
 
 // AesECBEncrypt
@@ -15,17 +17,13 @@ func AesECBEncrypt(origData []byte, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	length := (len(origData) + aes.BlockSize) / aes.BlockSize
-	plain := make([]byte, length*aes.BlockSize)
-	copy(plain, origData)
-	pad := byte(len(plain) - len(origData))
-	for i := len(origData); i < len(plain); i++ {
-		plain[i] = pad
-	}
-	encrypted := make([]byte, len(plain))
+	hash := sha3.Keccak256(origData)
+	padding := pkcs5Padding(origData, BlockSize)
+	encrypted := make([]byte, len(padding))
 	for bs, be := 0, cipher.BlockSize(); bs <= len(origData); bs, be = bs+cipher.BlockSize(), be+cipher.BlockSize() {
-		cipher.Encrypt(encrypted[bs:be], plain[bs:be])
+		cipher.Encrypt(encrypted[bs:be], padding[bs:be])
 	}
+	encrypted = append(hash, encrypted...)
 	return encrypted, nil
 }
 
@@ -38,17 +36,20 @@ func AesECBDecrypt(encrypted []byte, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	hash := encrypted[:HashSize]
+	encrypted = encrypted[HashSize:]
 	decrypted := make([]byte, len(encrypted))
 	for bs, be := 0, cipher.BlockSize(); bs < len(encrypted); bs, be = bs+cipher.BlockSize(), be+cipher.BlockSize() {
 		cipher.Decrypt(decrypted[bs:be], encrypted[bs:be])
 	}
+	origData := pkcs5UnPadding(decrypted)
 
-	trim := 0
-	if len(decrypted) > 0 {
-		trim = len(decrypted) - int(decrypted[len(decrypted)-1])
+	// 校验密码
+	if bytes.Equal(hash, sha3.Keccak256(origData)) {
+		return origData, nil
 	}
-
-	return decrypted[:trim], nil
+	return nil, errors.New(PasswordWrongErr)
 }
 
 // AesECBEncryptToBase64

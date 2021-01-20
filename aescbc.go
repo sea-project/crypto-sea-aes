@@ -9,7 +9,10 @@ import (
 	"github.com/sea-project/crypto-hash-sha3"
 )
 
-const BlockSize = aes.BlockSize
+const (
+	HashSize  = 32
+	BlockSize = aes.BlockSize
+)
 
 var (
 	PasswordWrongErr = "wrong password"
@@ -49,8 +52,8 @@ func AesCBCDecrypt(encrypted []byte, key []byte) ([]byte, error) {
 	key16 := make([]byte, 16)
 	copy(key16, key)
 
-	hash := encrypted[:32]
-	encrypted = encrypted[32:]
+	hash := encrypted[:HashSize]
+	encrypted = encrypted[HashSize:]
 
 	block, err := aes.NewCipher(key16)
 	if err != nil {
@@ -90,16 +93,3 @@ func AesCBCDecryptFromBase64(encrypted string, key string) (string, error) {
 	return string(bytes), nil
 }
 
-// pkcs5Padding PKCS5补码
-func pkcs5Padding(ciphertext []byte, blockSize int) []byte {
-	padding := blockSize - len(ciphertext)%blockSize
-	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
-	return append(ciphertext, padtext...)
-}
-
-// pkcs5UnPadding PKCS5解补码
-func pkcs5UnPadding(origData []byte) []byte {
-	length := len(origData)
-	unpadding := int(origData[length-1])
-	return origData[:(length - unpadding)]
-}
